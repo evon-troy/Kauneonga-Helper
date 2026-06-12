@@ -74,13 +74,13 @@ const MOCK_FACTS = {
     products: [{ name: "Microsoft Defender for Endpoint", version: "101.24112.0001", running: true, definitionsAge: "12 hours" }],
     approved: true,
   },
-  conflictingApps: { sipClients: [], browserExtensions: 4, runningCallApps: [] },
+  conflictingApps: { sipClients: [], chromeExtensions: 4, runningCallApps: [] },
   backgroundConsumers: [
     { name: "Slack", upMbps: 0.2, downMbps: 0.3 },
     { name: "Dropbox", upMbps: 0.0, downMbps: 0.0 },
     { name: "iCloud Drive", upMbps: 0.1, downMbps: 0.0 },
   ],
-  power: { onBattery: false, batteryLevel: 100, plugged: true, lidClosed: false },
+  power: { hasBattery: true, onBattery: false, batteryLevel: 100, plugged: true, lidClosed: false },
   audio: {
     output: "Plantronics Blackwire 5220 (USB)",
     input: "Plantronics Blackwire 5220 (USB)",
@@ -499,11 +499,13 @@ function SystemScreen() {
         <KV k="Other SIP clients" v={FACTS.conflictingApps.sipClients.length === 0 ? "None" : FACTS.conflictingApps.sipClients.join(", ")} status={FACTS.conflictingApps.sipClients.length > 1 ? "fail" : "pass"} />
       </Card>
 
-      <Card icon="phone" title="Power" status={FACTS.power.plugged ? "pass" : "warn"} sub={`${FACTS.power.batteryLevel}% · ${FACTS.power.plugged ? "Plugged in" : "On battery"}`}>
-        <KV k="Battery" v={`${FACTS.power.batteryLevel}%`} status="pass" />
-        <KV k="Power source" v={FACTS.power.plugged ? "AC adapter" : "Battery"} status={FACTS.power.plugged ? "pass" : "warn"} />
-        <KV k="Lid closed" v={FACTS.power.lidClosed == null ? "Unknown" : FACTS.power.lidClosed ? "Yes" : "No"} />
-      </Card>
+      {FACTS.power.hasBattery && (
+        <Card icon="phone" title="Power" status={FACTS.power.plugged ? "pass" : "warn"} sub={`${FACTS.power.batteryLevel}% · ${FACTS.power.plugged ? "Plugged in" : "On battery"}`}>
+          <KV k="Battery" v={`${FACTS.power.batteryLevel}%`} status="pass" />
+          <KV k="Power source" v={FACTS.power.plugged ? "AC adapter" : "Battery"} status={FACTS.power.plugged ? "pass" : "warn"} />
+          <KV k="Lid closed" v={FACTS.power.lidClosed == null ? "Unknown" : FACTS.power.lidClosed ? "Yes" : "No"} />
+        </Card>
+      )}
     </div>
   );
 }
@@ -592,7 +594,7 @@ function NetworkScreen() {
 
         <Card icon="users" title="Background apps" status={FACTS.conflictingApps.sipClients.length > 1 ? "fail" : "pass"} sub="Apps competing for bandwidth or audio">
           <KV k="Other SIP clients" v={FACTS.conflictingApps.sipClients.length === 0 ? "None" : FACTS.conflictingApps.sipClients.join(", ")} status={FACTS.conflictingApps.sipClients.length > 1 ? "fail" : "pass"} />
-          <KV k="Browser extensions" v={`${FACTS.conflictingApps.browserExtensions} installed`} status={FACTS.conflictingApps.browserExtensions > 3 ? "warn" : "pass"} />
+          <KV k="Chrome extensions" v={`${FACTS.conflictingApps.chromeExtensions} installed`} status={FACTS.conflictingApps.chromeExtensions > 3 ? "warn" : "pass"} />
           {FACTS.backgroundConsumers.map((c) => (
             <KV key={c.name} k={c.name} v={`↓ ${c.downMbps} Mbps  ↑ ${c.upMbps} Mbps`} />
           ))}

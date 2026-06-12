@@ -51,7 +51,7 @@ const GB = 1024 * 1024 * 1024;
 const round1 = (n) => Math.round(n * 10) / 10;
 
 function cpuApproved(brand, list) {
-  const b = (brand || "").toLowerCase();
+  const b = (brand || "").toLowerCase().replace(/[™®©]|\(tm\)|\(r\)/g, "");
   return list.some((p) => b.includes(p.toLowerCase()));
 }
 
@@ -171,6 +171,7 @@ async function collectFacts(policyOverride = {}) {
     conflictingApps: conflicting,
     backgroundConsumers: [],
     power: {
+      hasBattery: battery.hasBattery,
       onBattery: battery.hasBattery ? !battery.acConnected : false,
       batteryLevel: battery.hasBattery ? battery.percent : 100,
       plugged: battery.hasBattery ? battery.acConnected : true,
@@ -350,7 +351,7 @@ function detectUpdates() {
 }
 
 // Apps that compete for bandwidth/audio. Real running processes matched against
-// known softphones/call apps, plus a count of installed browser extensions.
+// known softphones/call apps, plus a count of installed Chrome extensions.
 async function detectConflictingApps() {
   const CALL = {
     zoom: "Zoom", teams: "Microsoft Teams", "ms-teams": "Microsoft Teams",
@@ -381,33 +382,42 @@ async function detectConflictingApps() {
   } catch (_) {
     /* leave empty */
   }
-  return { sipClients, browserExtensions: countBrowserExtensions(), runningCallApps };
+  return { sipClients, chromeExtensions: countChromeExtensions(), runningCallApps };
 }
 
-// Count installed browser extensions across Chromium-based browsers' default
-// profiles (each extension is a folder named by its ID).
-function countBrowserExtensions() {
+// Count installed Chrome extensions across every local Chrome profile (each
+// extension is a folder named by its ID under <profile>/Extensions).
+function countChromeExtensions() {
   const home = os.homedir();
-  const dirs = [];
+  let userDataDir;
   if (process.platform === "win32") {
     const lad = process.env.LOCALAPPDATA || path.join(home, "AppData", "Local");
-    dirs.push(path.join(lad, "Google", "Chrome", "User Data", "Default", "Extensions"));
-    dirs.push(path.join(lad, "Microsoft", "Edge", "User Data", "Default", "Extensions"));
-    dirs.push(path.join(lad, "BraveSoftware", "Brave-Browser", "User Data", "Default", "Extensions"));
+    userDataDir = path.join(lad, "Google", "Chrome", "User Data");
   } else if (process.platform === "darwin") {
-    const as = path.join(home, "Library", "Application Support");
-    dirs.push(path.join(as, "Google", "Chrome", "Default", "Extensions"));
-    dirs.push(path.join(as, "Microsoft Edge", "Default", "Extensions"));
-    dirs.push(path.join(as, "BraveSoftware", "Brave-Browser", "Default", "Extensions"));
+    userDataDir = path.join(home, "Library", "Application Support", "Google", "Chrome");
+  } else {
+    return 0;
   }
+
+  let profiles = [];
+  try {
+    profiles = fs
+      .readdirSync(userDataDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && (e.name === "Default" || e.name.startsWith("Profile ")))
+      .map((e) => e.name);
+  } catch (_) {
+    return 0; // Chrome not installed
+  }
+
   let count = 0;
-  for (const d of dirs) {
+  for (const profile of profiles) {
+    const extDir = path.join(userDataDir, profile, "Extensions");
     try {
       count += fs
-        .readdirSync(d, { withFileTypes: true })
+        .readdirSync(extDir, { withFileTypes: true })
         .filter((e) => e.isDirectory() && e.name !== "Temp").length;
     } catch (_) {
-      /* browser not installed */
+      /* profile has no extensions dir */
     }
   }
   return count;
