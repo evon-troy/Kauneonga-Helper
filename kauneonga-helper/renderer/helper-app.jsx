@@ -207,6 +207,14 @@ function Header({ syncedAgo }) {
           <div className="syncline">Connected to Liberty</div>
           <div className="syncsub">Last sync {syncedAgo}s ago · {FACTS.hostname}</div>
         </div>
+        {window.kauneonga && window.kauneonga.logout && (
+          <button
+            className="signout-btn"
+            onClick={async () => { await window.kauneonga.logout(); window.location.reload(); }}
+          >
+            Sign out
+          </button>
+        )}
       </div>
     </div>
   );
@@ -668,25 +676,17 @@ function ValidationScreen() {
   );
 }
 
-// macOS-style window frame (traffic lights + title). Wraps whatever is showing —
-// the loading screen during startup, then the dashboard.
+// Window frame (title only). Wraps whatever is showing — the loading screen
+// during startup, then the dashboard.
 function Frame({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: "#fff", display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
       <div style={{ width: "100%", background: "#fff", overflow: "hidden" }}>
         <div style={{
           height: 38, background: "#ededed", borderBottom: "1px solid #d6d6d6",
-          display: "flex", alignItems: "center", padding: "0 14px",
-          position: "relative",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "0 14px",
         }}>
-          <div style={{ display: "flex", gap: 8 }}>
-            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.18)" }}></span>
-            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#febc2e", border: "0.5px solid rgba(0,0,0,0.18)" }}></span>
-            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840", border: "0.5px solid rgba(0,0,0,0.18)" }}></span>
-          </div>
           <div style={{
-            position: "absolute", left: "50%", top: "50%",
-            transform: "translate(-50%, -50%)",
             fontSize: 13, fontWeight: 600, color: "#3a3a3a",
             fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
           }}>

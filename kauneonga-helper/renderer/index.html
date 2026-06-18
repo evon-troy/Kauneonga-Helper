@@ -13,7 +13,7 @@
 <body>
 <div id="root">
   <div style="font-family: system-ui, sans-serif; padding: 40px; color: #616161;">
-    Scanning workstation…
+    Loading…
   </div>
 </div>
 
@@ -25,13 +25,52 @@
 <script src="speedtest.js"></script>
 
 <!--
-  bootstrap: fetch live facts from the preload bridge, stash them on
-  window.__KAUNEONGA_FACTS__, THEN inject the Babel app scripts so helper-app.jsx
-  sees real data at module-eval time. Falls back to the mock if the bridge is
-  absent (plain browser / design preview).
+  bootstrap: gate on a Liberty sign-in (skipped entirely when no backend is
+  configured, see main.js), then fetch live facts from the preload bridge,
+  stash them on window.__KAUNEONGA_FACTS__, and inject the Babel app scripts
+  so helper-app.jsx sees real data at module-eval time. Falls back to the mock
+  if the bridge is absent (plain browser / design preview).
 -->
 <script>
-(async function bootstrap() {
+function renderLogin(errorText) {
+  var root = document.getElementById("root");
+  root.innerHTML =
+    '<div class="login-screen">' +
+      '<div class="login-card">' +
+        '<div class="login-brand">Kauneonga Helper</div>' +
+        '<div class="login-sub">Sign in with your Liberty account to continue</div>' +
+        (errorText ? '<div class="login-error"></div>' : '') +
+        '<label class="login-label" for="login-email">Email</label>' +
+        '<input class="login-input" type="email" id="login-email" autocomplete="username" />' +
+        '<label class="login-label" for="login-password">Password</label>' +
+        '<input class="login-input" type="password" id="login-password" autocomplete="current-password" />' +
+        '<button class="login-btn" id="login-submit">Sign in</button>' +
+      '</div>' +
+    '</div>';
+  if (errorText) {
+    root.querySelector(".login-error").textContent = errorText;
+  }
+  root.querySelector("#login-submit").addEventListener("click", handleLoginSubmit);
+  root.querySelector("#login-password").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") handleLoginSubmit();
+  });
+}
+
+async function handleLoginSubmit() {
+  var email = document.getElementById("login-email").value.trim();
+  var password = document.getElementById("login-password").value;
+  var btn = document.getElementById("login-submit");
+  btn.disabled = true;
+  btn.textContent = "Signing in…";
+  var result = await window.kauneonga.login({ email: email, password: password });
+  if (result.ok) {
+    loadApp();
+  } else {
+    renderLogin(result.error || "Sign-in failed. Check your email and password.");
+  }
+}
+
+async function loadApp() {
   try {
     if (window.kauneonga && window.kauneonga.getFacts) {
       window.__KAUNEONGA_FACTS__ = await window.kauneonga.getFacts();
@@ -39,6 +78,7 @@
   } catch (e) {
     console.warn("[Kauneonga Helper] live facts unavailable, using mock:", e);
   }
+  document.getElementById("root").innerHTML = "";
   ["icons.jsx", "toast.jsx", "helper-app.jsx"].forEach(function (src) {
     var s = document.createElement("script");
     s.type = "text/babel";
@@ -50,6 +90,25 @@
   // any added afterward.
   if (window.Babel && window.Babel.transformScriptTags) {
     window.Babel.transformScriptTags();
+  }
+}
+
+(async function bootstrap() {
+  // Plain browser (no preload bridge) → design preview, skip auth.
+  if (!(window.kauneonga && window.kauneonga.hasSession)) {
+    loadApp();
+    return;
+  }
+  var signedIn = false;
+  try {
+    signedIn = await window.kauneonga.hasSession();
+  } catch (e) {
+    signedIn = false;
+  }
+  if (signedIn) {
+    loadApp();
+  } else {
+    renderLogin(null);
   }
 })();
 </script>

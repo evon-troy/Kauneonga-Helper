@@ -12,4 +12,10 @@ contextBridge.exposeInMainWorld("kauneonga", {
   rescan: () => ipcRenderer.invoke("kauneonga:get-facts"),
   // Send the signed health report to your backend (wire in main).
   sendReport: (facts) => ipcRenderer.invoke("kauneonga:send-report", facts),
+  // True if no sign-in is required, or a Liberty session is already stored.
+  hasSession: () => ipcRenderer.invoke("kauneonga:has-session"),
+  // Sign in to Liberty; persists the session on success.
+  login: (creds) => ipcRenderer.invoke("kauneonga:login", creds),
+  // Clear the stored Liberty session.
+  logout: () => ipcRenderer.invoke("kauneonga:logout"),
 });

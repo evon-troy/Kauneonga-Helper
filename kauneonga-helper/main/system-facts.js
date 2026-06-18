@@ -50,6 +50,17 @@ const DEFAULT_POLICY = {
 const GB = 1024 * 1024 * 1024;
 const round1 = (n) => Math.round(n * 10) / 10;
 
+// Friendly fallback for machineType when systeminformation can't determine a
+// hardware model. os.platform() returns the literal string "win32" for every
+// Windows install regardless of bit-width — that's just Node's platform
+// constant, not a 32-bit indicator — so don't surface it as-is.
+function friendlyPlatform() {
+  const p = os.platform();
+  if (p === "win32") return "Windows PC";
+  if (p === "darwin") return "Mac";
+  return p;
+}
+
 function cpuApproved(brand, list) {
   const b = (brand || "").toLowerCase().replace(/[™®©]|\(tm\)|\(r\)/g, "");
   return list.some((p) => b.includes(p.toLowerCase()));
@@ -114,7 +125,7 @@ async function collectFacts(policyOverride = {}) {
       series: cpu.brand,
       approved: cpuApproved(cpu.brand, policy.approvedCpu),
     },
-    machineType: `${osInfo.manufacturer || ""} ${osInfo.model || os.platform()}`.trim(),
+    machineType: `${osInfo.manufacturer || ""} ${osInfo.model || friendlyPlatform()}`.trim(),
     ram: {
       totalGB: Math.round(mem.total / GB),
       freeGB: round1(mem.available / GB),
